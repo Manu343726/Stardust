@@ -171,3 +171,5 @@ The Stardust library is currently licensed under the Apache License, version 2.0
    See the License for the specific language governing permissions and
    limitations under the License.
 ```
+
+See the [`LICENSE`](https://github.com/Manu343726/Stardust/blob/master/LICENSE) file for more information.
