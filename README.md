@@ -56,7 +56,7 @@ int main()
     engine.start();
 }
 
- ```
+```
 
 The example above is so simple, but shows very whell the spirit of this library: You don't have to write raw simulation loops,
 you don't have to write your own particle type. **Just write how particles behave and how they are drawed, and the library
@@ -152,3 +152,20 @@ When there is no way to avoid dynamic binding, type-erasure, and classic OO poly
 
 
 
+# License 
+
+The Stardust library is currently licensed under the Apache License, version 2.0:
+
+    Copyright 2014 Manuel Sánchez Pérez
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
