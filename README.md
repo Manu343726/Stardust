@@ -156,6 +156,7 @@ When there is no way to avoid dynamic binding, type-erasure, and classic OO poly
 
 The Stardust library is currently licensed under the Apache License, version 2.0:
 
+```
     Copyright 2014 Manuel Sánchez Pérez
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -169,3 +170,4 @@ The Stardust library is currently licensed under the Apache License, version 2.0
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+```
