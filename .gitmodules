@@ -1,0 +1,6 @@
+[submodule "Turbo"]
+	path = Turbo
+	url = https://github.com/Manu343726/Turbo.git
+[submodule "TTL"]
+	path = TTL
+	url = https://github.com/Manu343726/TTL.git
