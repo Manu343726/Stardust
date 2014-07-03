@@ -47,16 +47,70 @@ namespace sdst
         using particle_t = particle;
         
         
+        /*
+         * Initializes the particle given the particle data and its evolution and drawing policies.
+         */
         particle( const data_t& data , const evolution_policy_t& evolution_policy , const drawing_policy_t& drawing_policy ) :
             _data{ data },
             _evolution_policy{ evolution_policy },
             _draw_policy{ drawing_policy }
-        [{}
+        {}
+            
+        /*
+         * Draws the particle
+         */    
+        void draw()
+        {
+            _draw_policy( _data );
+        }
+        
+        /*
+         * Updates the particle
+         */
+        void update()
+        {
+            _evolution_policy( _data );
+        }
+        
+        /*
+         * Draws the particle
+         */    
+        void draw() const
+        {
+            _draw_policy( _data );
+        }
+        
+        /*
+         * Updates the particle
+         */
+        void update() const
+        {
+            _evolution_policy( _data );
+        }
+        
+        /*
+         * Gives readonly access to the particle data
+         */
+        const data_t& data() const
+        {
+            return _data;
+        }
         
     private:
         data_t             _data;
         evolution_policy_t _evolution_policy;
         drawing_policy_t   _draw_policy;
     };
+    
+    /*
+     * Type-deduction-based builder for particles:
+     */
+    template<typename DATA , typename EVOLUTION_POLICY , typename DRAW_POLICY>
+    sdst::particle<typename std::decay<DATA>::type,typename std::decay<EVOLUTION_POLICY>::type,typename std::decay<DRAW_POLICY>::type> 
+    make_particle( DATA&& data , EVOLUTION_POLICY&& evolution_policy , DRAW_POLICY&& draw_policy )
+    {
+        return { std::forward<DATA>( data ) , std::forward<EVOLUTION_POLICY>( evolution_policy ) , std::forward<DRAW_POLICY>( draw_policy ) };
+    }
 }
-re
+
+#endif /* PARTICLE_HPP */

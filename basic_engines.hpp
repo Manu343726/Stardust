@@ -17,14 +17,14 @@
 * limitations under the License.                                           *
 ***************************************************************************/
 
-#include <Turbo/list.hpp>
-#include <TTL/include/algoritm.hpp>
-
 #ifndef ENGINE_HPP
 #define	ENGINE_HPP
 
+#include <functional>
+#include <utility>
+
 namespace sdst
-{
+{ 
     /*
      * A manual engine doesn't perform a simulation loop, it only provides the basic
      * functionality for the different simulation steps. The loop should be done manually
@@ -67,7 +67,7 @@ namespace sdst
              * rely on duck typing.
              */
             for( auto& particle : _scene )
-                particle.step();
+                particle.update();
         }
         
         /*
@@ -78,10 +78,32 @@ namespace sdst
             _drawing_policy( _scene );
         }
         
+        
+        /*
+         * Provides full (Read/Write) access to the underlying scene of an engine.
+         */
+        SCENE& scene()
+        {
+            return _scene;
+        }
+
+        /*
+         * Provides readonly access to the underlying scene of an engine
+         */
+        const SCENE& scene() const
+        {
+            return _scene;
+        }
     private:
         scene_t       _scene;
         draw_policy_t _drawing_policy;
     };
+    
+    template<typename SCENE , typename DRAW_POLICY>
+    sdst::basic_manual_engine<typename std::decay<SCENE>::type,typename std::decay<DRAW_POLICY>::type> make_basic_manual_engine( SCENE&& scene , DRAW_POLICY&& draw_policy )
+    {
+        return { std::forward<SCENE>( scene ) , std::forward<DRAW_POLICY>( draw_policy ) };
+    }
     
     /*
      * An automatic engine encapsulates a simulation loop which could be controlled
@@ -108,7 +130,7 @@ namespace sdst
         /*
          * The type of the engine
          */
-        using engine_t = basic_manual_engine<scene_t,draw_policy_t>;
+        using engine_t = basic_automatic_engine;
         
         
         /*
@@ -116,7 +138,7 @@ namespace sdst
          * The running condition is a boolean predicate which should be specified by the user.
          * Its default value is [](){ return true; }, i.e. performs an infinite loop.
          */
-        using running_condition_t = std::function<bool()>;
+        using running_condition_t = std::function<bool(const engine_t&)>;
         
         /*
          * The engine speficifies actions for different simulation stages.
@@ -141,8 +163,12 @@ namespace sdst
         /*
          * Initializes the engine passign the values to initialize the scene and the drawing policy
          */
-        basic_manual_engine( const scene_t& scene , const draw_policy_t& draw_policy ) :
-            _engine{ scene , draw_policy }
+        basic_automatic_engine( const scene_t& scene , const draw_policy_t& draw_policy ) :
+            _engine{ scene , draw_policy },
+            _run_condition{ []( const engine_t& ){ return true; } },
+            _before_update{ []( engine_t& ){} },
+            _before_draw{ []( engine_t& ){} },
+            _before_next{ []( engine_t& ){} }
         {}
             
         
@@ -198,7 +224,15 @@ namespace sdst
                 _before_draw( *this );
                 _engine.draw();
                 _before_next( *this );  
-            }while( _run_condition() );
+            }while( _run_condition( *this ) );
+        }
+        
+        /*
+         * Stops the simulation setting the running condition to false.
+         */
+        void stop()
+        {
+            _run_condition = []( const engine_t& ){ return false; };
         }
         
         /*
@@ -214,17 +248,91 @@ namespace sdst
          */
         simulation_result_t run_until( const running_condition_t& condition )
         {
-            return run_while( [](){ return !condition(); } );
+            return run_while( [&]( const engine_t& e ){ return !condition(e); } );
         }
-            
+        
+        /*
+         * Starts and runs the simulation while some property is met by all the particles
+         * of the scene.
+         */
+        template<typename PROPERTY>
+        simulation_result_t run_while_all( PROPERTY property )
+        {
+            run_while( [&]( const engine_t& e )
+            {
+                return std::all_of( std::begin( e.scene() ) , std::end( e.scene() ) , property );
+            });
+        }
+        
+        /*
+         * Starts and runs the simulation while some property is met by at least one particle
+         * of the scene.
+         */
+        template<typename PROPERTY>
+        simulation_result_t run_while_any( PROPERTY property )
+        {
+            run_while( [&]( const engine_t& e )
+            {
+                return std::any_of( std::begin( e.scene() ) , std::end( e.scene() ) , property );
+            });
+        }
+        
+        /*
+         * Starts and runs the simulation until some property is met by all the particles
+         * of the scene.
+         */
+        template<typename PROPERTY>
+        simulation_result_t run_until_all( PROPERTY property )
+        {
+            run_until( [&]( const engine_t& e )
+            {
+                return std::all_of( std::begin( e.scene() ) , std::end( e.scene() ) , property );
+            });
+        }
+        
+        /*
+         * Starts and runs the simulation until some property is met by at least one particle
+         * of the scene.
+         */
+        template<typename PROPERTY>
+        simulation_result_t run_until_any( PROPERTY property )
+        {
+            run_until( [&]( const engine_t& e )
+            {
+                return std::any_of( std::begin( e.scene() ) , std::end( e.scene() ) , property );
+            });
+        }
+         
+        
+        /*
+         * Provides full (Read/Write) access to the underlying scene of an engine.
+         */
+        SCENE& scene()
+        {
+            return _engine.scene();
+        }
+
+        /*
+         * Provides readonly access to the underlying scene of an engine
+         */
+        const SCENE& scene() const
+        {
+            return _engine.scene();
+        }
     private:
+        underlying_engine_t _engine;
+        
         running_condition_t _run_condition;
         mutable_action_t    _before_update;
         mutable_action_t    _before_draw; //Note that after update is before draw too.
         mutable_action_t    _before_next; //After draw is before next iteration.
-        
-        underlying_engine_t _engine;
     };
+    
+    template<typename SCENE , typename DRAW_POLICY>
+    sdst::basic_automatic_engine<typename std::decay<SCENE>::type,typename std::decay<DRAW_POLICY>::type> make_basic_automatic_engine( SCENE&& scene , DRAW_POLICY&& draw_policy )
+    {
+        return { std::forward<SCENE>( scene ) , std::forward<DRAW_POLICY>( draw_policy ) };
+    }
 }
 
 #endif	/* ENGINE_HPP */
