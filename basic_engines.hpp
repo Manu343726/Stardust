@@ -23,6 +23,8 @@
 #include <functional>
 #include <utility>
 
+#include "stated_policies.hpp"
+
 namespace sdst
 { 
     /*
@@ -68,6 +70,9 @@ namespace sdst
              */
             for( auto& particle : _scene )
                 particle.update();
+            
+            //Update the drawing policy:
+            _drawing_policy( sdst::state_change::global );
         }
         
         /*
@@ -95,8 +100,8 @@ namespace sdst
             return _scene;
         }
     private:
-        scene_t       _scene;
-        draw_policy_t _drawing_policy;
+        scene_t                          _scene;
+        sdst::erase_state<draw_policy_t> _drawing_policy;
     };
     
     template<typename SCENE , typename DRAW_POLICY>

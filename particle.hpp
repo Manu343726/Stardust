@@ -20,6 +20,9 @@
 #ifndef PARTICLE_HPP
 #define	PARTICLE_HPP
 
+#include "stated_policies.hpp"
+
+
 namespace sdst
 {
     template<typename DATA , typename EVOLUTION_POLICY , typename DRAW_POLICY>
@@ -73,7 +76,7 @@ namespace sdst
         }
         
         /*
-         * Draws the particle
+         * Draws the particle (Const overload)
          */    
         void draw() const
         {
@@ -81,11 +84,17 @@ namespace sdst
         }
         
         /*
-         * Updates the particle
+         * Updates the particle (Const overload)
          */
         void update() const
         {
+            //First call the particle evolution policy, then
+            //update the policies:
+            
             _evolution_policy( _data );
+            
+            _evolution_policy( sdst::state_change::local );
+            _draw_policy( sdst::state_change::local );
         }
         
         /*
@@ -97,9 +106,9 @@ namespace sdst
         }
         
     private:
-        data_t             _data;
-        evolution_policy_t _evolution_policy;
-        drawing_policy_t   _draw_policy;
+        data_t                                _data;
+        sdst::erase_state<evolution_policy_t> _evolution_policy;
+        sdst::erase_state<drawing_policy_t>   _draw_policy;
     };
     
     /*

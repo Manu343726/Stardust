@@ -73,6 +73,15 @@ namespace sdst
     {
         return { std::forward<ARGS>( args )... };
     }
+    
+    /*
+     * Builder for shared policies (No ctor forwarding, but full type-deductive).
+     */
+    template<typename POLICY>
+    sdst::shared_policy<typename std::decay<POLICY>::type> make_shared_policy( POLICY&& policy )
+    {
+        return { std::forward<POLICY>( policy ) };
+    }
 }
 
 #endif	/* SHARED_POLICY_HPP */
