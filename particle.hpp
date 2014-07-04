@@ -37,12 +37,12 @@ namespace sdst
         /*
          * The type of the particle evolution policy
          */
-        using evolution_policy_t = EVOLUTION_POLICY;
+        using evolution_policy_t = typename std::decay<EVOLUTION_POLICY>::type;
         
         /*
          * The type of the particle drawing policy
          */
-        using drawing_policy_t = DRAW_POLICY;
+        using drawing_policy_t = typename std::decay<DRAW_POLICY>::type;
         
         /*
          * The type of the particle

@@ -25,9 +25,15 @@
 #include "basic_engines.hpp"
 #include "particle.hpp"
 
+#include "Turbo/overloaded_function.hpp"
+
+
+
 #ifndef SCENE_SIZE
-#define SCENE_SIZE 100
+#define SCENE_SIZE 10000
 #endif
+
+float acc = 1.0f; //Particles acceleration
 
 struct particle_data
 {
@@ -41,7 +47,7 @@ struct particle_data
 
 void update( particle_data& data )
 {
-    data.x += 5.0f;
+    data.x += acc;
 }
 
 void draw( const particle_data& data )
@@ -49,7 +55,14 @@ void draw( const particle_data& data )
     std::cout << "(" << data.x << "," << data.y << ")";
 }
 
-using particle_t = decltype( sdst::make_particle( particle_data{} , update , draw ) );
+auto evolution_policy = tml::runtime::make_overloaded_function( update , 
+                                                                [&]( sdst::state_change change ) 
+                                                                {
+                                                                   if( change == sdst::state_change::global )
+                                                                       acc += 1.001f;
+                                                                });
+
+using particle_t = sdst::particle<particle_data,decltype(evolution_policy),decltype(draw)>;
 using scene_t    = std::vector<particle_t>;
 
 void draw_scene( const scene_t& scene )
@@ -66,14 +79,16 @@ int main()
     scene_t scene;
     
     for( std::size_t i = 0 ; i < SCENE_SIZE ; ++i )
-        scene.emplace_back( particle_data{ static_cast<float>( i ) , 1.0f } , update , draw );
+        scene.emplace_back( particle_data{ static_cast<float>( i ) , 1.0f } , evolution_policy , draw );
         
     auto engine = sdst::make_basic_automatic_engine( std::move(scene) , draw_scene );
     
     engine.before_draw( []( decltype(engine)& e ){ std::cout << "Drawing scene...\n"; } )
     
-          .before_next( []( decltype(engine)& e )
+          .before_next( [&]( decltype(engine)& e )
                         {
+                            evolution_policy( sdst::state_change::global ); //Update the evolution policy
+              
                             if( e.scene().size() > 0 )
                             {
                                 e.scene().pop_back();
@@ -88,7 +103,7 @@ int main()
           
           .run_until_any( []( const particle_t& particle )
                           {
-                              return particle.data().x > 300.0f;
+                              return particle.data().x > 30000.0f;
                           }
                         );
 }
