@@ -19,6 +19,7 @@
 
 #include <iostream>
 #include <vector>
+#include <deque>
 #include <algorithm>
 #include <functional>
 
@@ -28,83 +29,123 @@
 #include "Turbo/overloaded_function.hpp"
 
 
+#include <SFML/Graphics.hpp>
+#include <SFML/Window.hpp>
+#include <random>
+
 
 #ifndef SCENE_SIZE
 #define SCENE_SIZE 10000
 #endif
 
-float acc = 1.0f; //Particles acceleration
 
-struct particle_data
+using particle_data = sf::Vertex;
+
+struct evolution
 {
-    float x , y;
+public:
     
-    particle_data( float _x = 0.0f , float _y = 0.0f ) :
-        x{ _x },
-        y{ _y }
-    {}
+private:
+    void restart( particle_data& data )
+    {
+        data.position.x = _x_dist( _prng() );
+        data.position.y = _y_dist( _prng() );
+        
+        data.color.a = 255;
+        data.color.r = _rgb_dist( _prng() );
+        data.color.g = _rgb_dist( _prng() );
+        data.color.b = _rgb_dist( _prng() );
+    }
+    
+    std::mt19937                                 _prng;
+    std::uniform_real_distribution<float>        _x_dist;
+    std::uniform_real_distribution<float>        _y_dist;
+    std::uniform_int_distribution<std::uint8_t>  _rgb_dist;
+    sf::Vector2f                                 _blackhole;
+    float                                        _vertical_gravity;
 };
 
-void update( particle_data& data )
+/* F...ng Standard Library... */
+template<typename T>
+struct fixed_size_queue
 {
-    data.x += acc;
-}
-
-void draw( const particle_data& data )
-{
-    std::cout << "(" << data.x << "," << data.y << ")";
-}
-
-auto evolution_policy = tml::runtime::make_overloaded_function( update , 
-                                                                [&]( sdst::state_change change ) 
-                                                                {
-                                                                   if( change == sdst::state_change::global )
-                                                                       acc += 1.001f;
-                                                                });
-
-using particle_t = sdst::particle<particle_data,decltype(evolution_policy),decltype(draw)>;
-using scene_t    = std::vector<particle_t>;
-
-void draw_scene( const scene_t& scene )
-{
-    for( auto& particle : scene )
+public:
+    fixed_size_queue( std::size_t size ) :
+        _remaining{ size }
+    {}
+    
+    template<typename... ARGS>
+    void push( ARGS&&... args )
     {
-        particle.draw();
-        std::cout << "\n";
+        if( _remaining > 0 )
+        {
+            _queue.emplace_back( std::forward<ARGS>( args )... );
+            _remaining--;
+        }
     }
-}
+    
+    void pop()
+    {
+        if( _queue.size() > 0 )
+        {
+            _queue.pop_front();
+            _remaining++;
+        }
+    }
+    
+    auto begin() const -> decltype( _queue.begin() )
+    {
+        return _queue.begin();
+    }
+    
+    auto end() const -> decltype( _queue.end() )
+    {
+        return _queue.end();
+    }
+    
+    std::size_t size() const
+    {
+        return _queue.size();
+    }
+    
+private:
+    std::deque<T> _queue;
+    std::size_t   _remaining;
+};
 
-int main() 
+struct particle_drawing
 {
-    scene_t scene;
+public:
+    particle_drawing( std::size_t tail_length , sf::RenderTarget& canvas ) :
+        _tail{ tail_length },
+        _canvas{ canvas }
+    {}
     
-    for( std::size_t i = 0 ; i < SCENE_SIZE ; ++i )
-        scene.emplace_back( particle_data{ static_cast<float>( i ) , 1.0f } , evolution_policy , draw );
+    void operator()( particle_data& data )
+    {
+        _tail.push( data );
+        std::vector<particle_data> buffer{ _tail.size() };
         
-    auto engine = sdst::make_basic_automatic_engine( std::move(scene) , draw_scene );
+        std::copy( std::begin( _tail ) , std::end( _tail ) , std::begin( buffer ) );
+        
+        _canvas.get().draw( buffer.data() , _tail.size() , sf::Points );
+    }
     
-    engine.before_draw( []( decltype(engine)& e ){ std::cout << "Drawing scene...\n"; } )
-    
-          .before_next( [&]( decltype(engine)& e )
-                        {
-                            evolution_policy( sdst::state_change::global ); //Update the evolution policy
-              
-                            if( e.scene().size() > 0 )
-                            {
-                                e.scene().pop_back();
-                                std::cout << "Oh, we have lost one particle!\n";
-                            }
-                            else
-                            {
-                                std::cout << "We are out of particles! Shutting down...\n";
-                                e.stop();
-                            }
-                        })
-          
-          .run_until_any( []( const particle_t& particle )
-                          {
-                              return particle.data().x > 30000.0f;
-                          }
-                        );
-}
+private:
+    std::reference_wrapper<sf::RenderTarget> _canvas;
+    fixed_size_queue<sf::Vertex> _tail;
+};
 
+int main()
+{
+    sf::RenderWindow window;
+    auto engine = sdst::make_basic_automatic_engine( generate_scene() , [&]( const std::vector<particle_data>& scene )
+    {
+        for( auto& particle : particles )
+            particle.draw( window );
+        
+        window.display();
+    });
+    
+    
+}
